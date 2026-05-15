@@ -15,80 +15,115 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
+            background: #f9f9f9;
         }
         
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 2rem;
+            padding: 3rem 2rem;
             text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         header h1 {
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
+            font-weight: 700;
         }
         
         header p {
             font-size: 1.2rem;
-            opacity: 0.9;
+            opacity: 0.95;
         }
         
         main {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 2rem;
         }
         
         section {
             margin: 2rem 0;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         h2 {
             color: #667eea;
             margin-bottom: 1rem;
             font-size: 1.8rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
         }
         
         p {
             margin-bottom: 1rem;
             line-height: 1.8;
+            color: #555;
+        }
+        
+        .content {
+            margin-bottom: 1rem;
+        }
+        
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
         }
         
         footer {
-            background: #f4f4f4;
+            background: #2d3436;
+            color: white;
             padding: 2rem;
             text-align: center;
             margin-top: 3rem;
-            color: #666;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>Elandskloof Project</h1>
-        <p>Proto Website</p>
+        <p>Proto Website - Welcome</p>
     </header>
     
     <main>
         <section>
-            <h2>Welcome</h2>
-            <p>This is the prototype website for the Elandskloof Project. We're building something amazing here.</p>
+            <h2>Welcome to Elandskloof</h2>
+            <div class="content">
+                <p>This is the prototype website for the Elandskloof Project. We're dedicated to creating innovative solutions and exploring new possibilities in our community.</p>
+            </div>
         </section>
         
         <section>
-            <h2>About</h2>
-            <p>The Elandskloof Project is dedicated to creating innovative solutions and exploring new possibilities.</p>
+            <h2>About Us</h2>
+            <div class="content">
+                <p>The Elandskloof Project is committed to making a positive impact. Our mission is to bring communities together through innovative technology and sustainable practices.</p>
+            </div>
         </section>
         
         <section>
             <h2>Getting Started</h2>
-            <p>Visit our repository to learn more and contribute to the project.</p>
+            <div class="content">
+                <p>To learn more about our project, you can:</p>
+                <ul style="margin-left: 2rem; margin-top: 1rem;">
+                    <li>Visit our <a href="https://github.com/courtneyhaas3-ai/theelandskloofproject2">GitHub repository</a></li>
+                    <li>Explore our documentation</li>
+                    <li>Contribute to the project</li>
+                </ul>
+            </div>
         </section>
     </main>
     
     <footer>
         <p>&copy; 2026 Elandskloof Project. All rights reserved.</p>
+        <p style="margin-top: 1rem; opacity: 0.8;">Deployed via GitHub Pages</p>
     </footer>
 </body>
 </html>
