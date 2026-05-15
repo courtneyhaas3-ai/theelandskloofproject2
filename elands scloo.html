@@ -1,0 +1,531 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Leaf, Sprout, Home, Landmark, ArrowRight, Handshake, Globe, Factory, ChevronDown } from 'lucide-react';
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+// Palette: earth ochre, deep forest, raw linen, terracotta
+// Typeface: Playfair Display (display) + DM Sans (body)
+// Aesthetic: editorial agri-luxury — land journal meets impact prospectus
+
+const GOOGLE_FONTS = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
+`;
+
+const style = `
+  ${GOOGLE_FONTS}
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --linen:      #F5F0E8;
+    --linen-dark: #EDE7D9;
+    --ink:        #1C1C18;
+    --forest:     #2B4A2E;
+    --forest-mid: #3D6642;
+    --forest-lt:  #5A8F60;
+    --ochre:      #B5841A;
+    --terra:      #8B4513;
+    --stone:      #7A7060;
+    --stone-lt:   #B0A898;
+  }
+
+  body { background: var(--linen); color: var(--ink); }
+
+  .serif { font-family: 'Playfair Display', Georgia, serif; }
+  .sans  { font-family: 'DM Sans', sans-serif; }
+
+  /* Reveal animation */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1);
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Staggered children */
+  .stagger > * { transition-delay: calc(var(--i,0) * 0.1s); }
+
+  /* Horizontal rule with leaf */
+  .rule {
+    display: flex; align-items: center; gap: 16px;
+    color: var(--forest-lt);
+  }
+  .rule::before, .rule::after {
+    content: ''; flex: 1; height: 1px; background: var(--forest-lt); opacity: 0.35;
+  }
+
+  /* Card hover */
+  .card {
+    background: white; border-radius: 4px;
+    border: 1px solid rgba(43,74,46,0.1);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .card:hover {
+    box-shadow: 0 12px 40px rgba(43,74,46,0.12);
+    transform: translateY(-3px);
+  }
+
+  /* Grain overlay */
+  .grain::after {
+    content: '';
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 256px;
+    opacity: 0.028;
+    mix-blend-mode: multiply;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--linen); }
+  ::-webkit-scrollbar-thumb { background: var(--forest-lt); border-radius: 3px; }
+
+  /* Pill tag */
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Sans', sans-serif; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--forest); background: rgba(43,74,46,0.08);
+    border: 1px solid rgba(43,74,46,0.18);
+    padding: 6px 14px; border-radius: 999px;
+  }
+
+  /* Number stat */
+  .stat-number {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 400; color: var(--forest); line-height: 1;
+  }
+
+  /* Divider tick marks */
+  .tick-row {
+    display: flex; gap: 4px; align-items: center;
+  }
+  .tick { width: 1px; height: 12px; background: var(--forest-lt); opacity: 0.4; }
+  .tick.tall { height: 20px; opacity: 0.7; }
+`;
+
+// ─── REVEAL HOOK ──────────────────────────────────────────────────────────────
+function useReveal() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add('in'); obs.disconnect(); } },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+// ─── SECTION WRAPPER ─────────────────────────────────────────────────────────
+function Reveal({ children, style: s, className = '' }) {
+  const ref = useReveal();
+  return <div ref={ref} className={`reveal ${className}`} style={s}>{children}</div>;
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [navScrolled, setNavScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <>
+      <style>{style}</style>
+
+      <div className="sans" style={{ background: 'var(--linen)', minHeight: '100vh' }}>
+
+        {/* ── NAVIGATION ── */}
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          padding: navScrolled ? '16px 48px' : '28px 48px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          background: navScrolled ? 'rgba(245,240,232,0.95)' : 'transparent',
+          backdropFilter: navScrolled ? 'blur(12px)' : 'none',
+          borderBottom: navScrolled ? '1px solid rgba(43,74,46,0.1)' : 'none',
+          transition: 'all 0.4s ease',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Leaf size={16} color="var(--forest)" />
+            <span className="serif" style={{ fontSize: 15, fontWeight: 500, color: 'var(--forest)', letterSpacing: '-0.01em' }}>
+              The Elandskloof Projects
+            </span>
+          </div>
+          <a href="#partner" style={{
+            fontFamily: 'DM Sans', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+            color: 'var(--linen)', background: 'var(--forest)',
+            padding: '10px 22px', borderRadius: '2px',
+            textDecoration: 'none', fontWeight: 500,
+            transition: 'background 0.2s',
+          }}>
+            Partner With Us
+          </a>
+        </nav>
+
+        {/* ── HERO ── */}
+        <section className="grain" style={{
+          position: 'relative',
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '120px 48px 80px',
+          background: 'linear-gradient(180deg, var(--linen) 0%, var(--linen-dark) 100%)',
+          textAlign: 'center', overflow: 'hidden',
+        }}>
+          {/* Background horizontal rules */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            {[20, 40, 60, 80].map(p => (
+              <div key={p} style={{ position: 'absolute', top: `${p}%`, left: 0, right: 0, height: 1, background: 'var(--forest)', opacity: 0.04 }} />
+            ))}
+          </div>
+
+          <Reveal>
+            <div className="tag" style={{ marginBottom: 32 }}>
+              <Leaf size={10} />
+              A Blueprint for Ecological & Economic Revival
+            </div>
+          </Reveal>
+
+          <Reveal style={{ transitionDelay: '0.1s' }}>
+            <h1 className="serif" style={{
+              fontSize: 'clamp(3rem, 8vw, 7rem)', fontWeight: 400, lineHeight: 1.02,
+              color: 'var(--ink)', letterSpacing: '-0.025em',
+              maxWidth: 900, marginBottom: 36,
+            }}>
+              Cultivating{' '}
+              <span style={{ fontStyle: 'italic', color: 'var(--forest)' }}>Heritage.</span>
+              <br />
+              Engineering{' '}
+              <span style={{ fontStyle: 'italic', color: 'var(--ochre)' }}>the Future.</span>
+            </h1>
+          </Reveal>
+
+          <Reveal style={{ transitionDelay: '0.2s' }}>
+            <p style={{
+              fontSize: 'clamp(1rem, 1.6vw, 1.2rem)', lineHeight: 1.75,
+              color: 'var(--stone)', maxWidth: 680, marginBottom: 64,
+              fontWeight: 300,
+            }}>
+              A scalable, hybrid economic model incorporating regenerative agriculture,
+              eco-heritage architecture, and agritourism — creating resilient revenue streams
+              to empower the Elandskloof community and restore the land.
+            </p>
+          </Reveal>
+
+          {/* Stats row */}
+          <Reveal style={{ transitionDelay: '0.3s', width: '100%', maxWidth: 700 }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 0, borderTop: '1px solid rgba(43,74,46,0.15)',
+              borderBottom: '1px solid rgba(43,74,46,0.15)',
+              padding: '40px 0',
+            }}>
+              {[
+                { n: '3+', label: 'Revenue Streams', sub: 'Agriculture · Tourism · Manufacturing' },
+                { n: '∞', label: 'Generational Impact', sub: 'Community-owned cooperative model' },
+                { n: '100%', label: 'ESG Aligned', sub: 'Carbon-negative construction methods' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  textAlign: 'center', padding: '0 24px',
+                  borderRight: i < 2 ? '1px solid rgba(43,74,46,0.12)' : 'none',
+                }}>
+                  <div className="stat-number">{s.n}</div>
+                  <div style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--forest)', marginTop: 8, marginBottom: 4, fontWeight: 500 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--stone-lt)', lineHeight: 1.5 }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+
+          {/* Scroll cue */}
+          <div style={{ position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, opacity: 0.35, animation: 'none' }}>
+            <span style={{ fontSize: 9, letterSpacing: '0.4em', textTransform: 'uppercase', color: 'var(--forest)' }}>Scroll</span>
+            <ChevronDown size={14} color="var(--forest)" />
+          </div>
+        </section>
+
+        {/* ── COMMUNITY VISION ── */}
+        <section style={{ padding: '120px 48px', background: 'white' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'center' }}>
+
+              {/* Image grid */}
+              <Reveal>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {[
+                    { src: 'community (3).jpg', alt: 'Community Life', style: { borderRadius: '80px 8px 8px 8px' } },
+                    { src: 'community (9).jpg', alt: 'Community Member', style: { borderRadius: '8px 8px 80px 8px', marginTop: 24 } },
+                    { src: 'community (15).jpg', alt: 'Gathering', style: { borderRadius: '8px 80px 8px 8px' } },
+                    { src: 'community (16).jpg', alt: 'Initiative', style: { borderRadius: '8px 8px 8px 80px', marginTop: -24 } },
+                  ].map((img, i) => (
+                    <div key={i} style={{ ...img.style, overflow: 'hidden', aspectRatio: '1/1' }}>
+                      <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+
+              {/* Text */}
+              <Reveal style={{ transitionDelay: '0.15s' }}>
+                <div className="tag" style={{ marginBottom: 24 }}>
+                  <Handshake size={10} />
+                  Cooperative Model
+                </div>
+                <h2 className="serif" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 400, lineHeight: 1.15, color: 'var(--ink)', marginBottom: 24, letterSpacing: '-0.02em' }}>
+                  A Holistic Cooperative Model
+                </h2>
+                <p style={{ color: 'var(--stone)', lineHeight: 1.8, fontSize: '1.05rem', marginBottom: 20, fontWeight: 300 }}>
+                  The Elandskloof project is a comprehensive social enterprise designed for measurable impact — translating community ownership into a sustainable cooperative economic engine.
+                </p>
+                <p style={{ color: 'var(--stone)', lineHeight: 1.8, fontSize: '1.05rem', marginBottom: 36, fontWeight: 300 }}>
+                  By blending high-yield commercial viability with deep social healing, this plan serves the community through skills transfer, job creation, and the establishment of an intergenerational legacy.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {[
+                    'Regenerative Farming & Agritourism',
+                    'Community-Owned Enterprise Structures',
+                    'Multiple Diversified Revenue Streams',
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 20, height: 1, background: 'var(--forest-lt)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.9rem', color: 'var(--forest)', fontWeight: 500, letterSpacing: '0.02em' }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ── AGRICULTURE ── */}
+        <section style={{ padding: '120px 48px', background: 'var(--linen)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Reveal style={{ textAlign: 'center', marginBottom: 72 }}>
+              <div className="rule" style={{ marginBottom: 32 }}>
+                <Sprout size={14} />
+              </div>
+              <h2 className="serif" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', fontWeight: 400, color: 'var(--ink)', marginBottom: 20, letterSpacing: '-0.02em' }}>
+                Sustainable Agriculture &amp; Value Addition
+              </h2>
+              <p style={{ fontSize: '1.05rem', color: 'var(--stone)', maxWidth: 620, margin: '0 auto', lineHeight: 1.75, fontWeight: 300 }}>
+                Harnessing the natural wealth of the Cederberg region to create premium, export-ready products while reviving indigenous agricultural traditions.
+              </p>
+            </Reveal>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+              {[
+                {
+                  icon: <Sprout size={28} color="var(--forest)" />,
+                  title: 'Indigenous Medicine',
+                  body: 'Reviving the sustainable harvest of native Buchu and Rooibos — high-demand indigenous botanicals providing a robust foundation for our agricultural commercial arm.',
+                  accent: 'var(--forest)',
+                },
+                {
+                  icon: <Globe size={28} color="var(--ochre)" />,
+                  title: 'World-Class Citrus',
+                  body: 'Situated in the Cederberg — a region globally renowned for producing some of the world\'s finest citrus — giving our orchards an immediate competitive edge in international markets.',
+                  accent: 'var(--ochre)',
+                },
+                {
+                  icon: <Factory size={28} color="var(--terra)" />,
+                  title: 'On-Site Manufacturing',
+                  body: 'Establishing state-of-the-art facilities to process raw materials locally. This vertical integration retains maximum economic value within the community.',
+                  accent: 'var(--terra)',
+                },
+              ].map((card, i) => (
+                <Reveal key={i} style={{ transitionDelay: `${i * 0.12}s` }}>
+                  <div className="card" style={{ padding: 40, height: '100%' }}>
+                    <div style={{ marginBottom: 28, padding: 14, background: 'var(--linen)', borderRadius: 4, display: 'inline-flex' }}>
+                      {card.icon}
+                    </div>
+                    <h3 className="serif" style={{ fontSize: '1.3rem', fontWeight: 500, color: 'var(--ink)', marginBottom: 16, letterSpacing: '-0.01em' }}>
+                      {card.title}
+                    </h3>
+                    <p style={{ color: 'var(--stone)', lineHeight: 1.8, fontSize: '0.95rem', fontWeight: 300 }}>
+                      {card.body}
+                    </p>
+                    <div style={{ marginTop: 28, width: 32, height: 2, background: card.accent, opacity: 0.5 }} />
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── ARCHITECTURE ── */}
+        <section className="grain" style={{
+          position: 'relative', overflow: 'hidden',
+          padding: '120px 48px',
+          background: 'var(--forest)',
+          color: 'var(--linen)',
+        }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96, alignItems: 'center' }}>
+
+              {/* Text */}
+              <Reveal>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 24, opacity: 0.6 }}>
+                  <Home size={14} color="var(--linen)" />
+                  <span style={{ fontSize: 10, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--linen)', fontWeight: 500 }}>Eco-Heritage Architecture</span>
+                </div>
+                <h2 className="serif" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 400, color: 'var(--linen)', lineHeight: 1.15, marginBottom: 16, letterSpacing: '-0.02em' }}>
+                  Pioneering{' '}
+                  <span style={{ fontStyle: 'italic', color: 'rgba(245,240,232,0.65)' }}>"Non-Crete"</span>{' '}
+                  Construction
+                </h2>
+                <div style={{ width: 48, height: 1, background: 'var(--ochre)', marginBottom: 28, opacity: 0.7 }} />
+                <p style={{ color: 'rgba(245,240,232,0.7)', lineHeight: 1.85, fontSize: '1rem', marginBottom: 20, fontWeight: 300 }}>
+                  We are redefining rural development through the construction of indigenous farm homes using an innovative, highly eco-friendly method — transforming invasive wattle into sustainable "non-crete" building materials.
+                </p>
+                <p style={{ color: 'rgba(245,240,232,0.7)', lineHeight: 1.85, fontSize: '1rem', fontWeight: 300 }}>
+                  These homes honor heritage aesthetics while seamlessly blending into the breathtaking mountains and valleys of Elandskloof — structures that hearken to a different era.
+                </p>
+
+                <div style={{ display: 'flex', gap: 32, marginTop: 48 }}>
+                  {[
+                    { label: 'Carbon Negative', value: 'Construction' },
+                    { label: 'Invasive Species', value: 'Repurposed' },
+                  ].map((s, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--ochre)', marginBottom: 4, opacity: 0.85 }}>{s.label}</div>
+                      <div className="serif" style={{ fontSize: '1.1rem', color: 'var(--linen)', fontStyle: 'italic' }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+
+              {/* Image grid */}
+              <Reveal style={{ transitionDelay: '0.15s' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {[
+                    { src: 'wattel to non-crette  (1).jpg', alt: 'Wattle to Non-Crete — Project Presentation',  style: { borderRadius: '4px 4px 4px 60px' } },
+                    { src: 'wattel to non-crette  (2).jpg', alt: 'Non-Crete Structure — Eco Construction',       style: { borderRadius: '4px 60px 4px 4px', marginTop: 28 } },
+                    { src: 'wattel to non-crette  (4).jpg', alt: 'Community Partnership — WWF Green Trust',       style: { borderRadius: '60px 4px 4px 4px' } },
+                    { src: 'wattel to non-crette  (5).jpg', alt: 'Non-Crete Blocks — Wattle Fibre Material',      style: { borderRadius: '4px 4px 60px 4px', marginTop: -28 } },
+                  ].map((img, i) => (
+                    <div key={i} style={{ ...img.style, overflow: 'hidden', aspectRatio: '4/3', border: '1px solid rgba(245,240,232,0.12)' }}>
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ── INVESTOR PITCH ── */}
+        <section style={{ padding: '120px 48px', background: 'white' }}>
+          <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
+            <Reveal>
+              <div style={{ width: 1, height: 80, background: 'var(--forest-lt)', opacity: 0.35, margin: '0 auto 48px' }} />
+              <div className="tag" style={{ marginBottom: 32 }}>
+                <Landmark size={10} />
+                Impact Investment
+              </div>
+              <h2 className="serif" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', fontWeight: 400, color: 'var(--ink)', marginBottom: 32, lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+                An Invitation to<br />
+                <span style={{ fontStyle: 'italic', color: 'var(--forest)' }}>Impact Investors</span>
+              </h2>
+              <p style={{ fontSize: '1.15rem', color: 'var(--stone)', lineHeight: 1.85, marginBottom: 28, fontWeight: 300 }}>
+                The Elandskloof Project represents a rare convergence of{' '}
+                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>high-impact social upliftment</strong>,{' '}
+                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>ecological restoration</strong>, and{' '}
+                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>commercial viability</strong>.
+              </p>
+              <p style={{ fontSize: '1rem', color: 'var(--stone-lt)', lineHeight: 1.9, marginBottom: 64, fontWeight: 300 }}>
+                By investing in this cooperative model, you fund a scalable blueprint that transitions a historically marginalized community into self-sufficient producers. From premium citrus exports and value-added indigenous medicines to pioneering carbon-negative architecture — your capital will catalyze generational change and deliver unparalleled ESG returns.
+              </p>
+
+              {/* ESG pillars */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'var(--linen)', border: '1px solid var(--linen)', borderRadius: 4, overflow: 'hidden', marginBottom: 72 }}>
+                {[
+                  { letter: 'E', label: 'Environmental', desc: 'Regenerative farming, carbon-negative builds, invasive species repurposing' },
+                  { letter: 'S', label: 'Social', desc: 'Community ownership, skills transfer, job creation, intergenerational legacy' },
+                  { letter: 'G', label: 'Governance', desc: 'Transparent cooperative structures, community-led decision making' },
+                ].map((p, i) => (
+                  <div key={i} style={{ background: 'white', padding: '40px 28px', textAlign: 'center' }}>
+                    <div className="serif" style={{ fontSize: '3rem', fontWeight: 400, color: 'var(--forest)', fontStyle: 'italic', lineHeight: 1, marginBottom: 12 }}>{p.letter}</div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--forest)', marginBottom: 12, fontWeight: 500 }}>{p.label}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--stone)', lineHeight: 1.7, fontWeight: 300 }}>{p.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ── CTA ── */}
+        <section id="partner" className="grain" style={{
+          position: 'relative', overflow: 'hidden',
+          padding: '120px 48px',
+          background: 'var(--ink)',
+          textAlign: 'center',
+        }}>
+          <Reveal>
+            <div style={{ maxWidth: 700, margin: '0 auto' }}>
+              <h2 className="serif" style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', fontWeight: 400, color: 'var(--linen)', marginBottom: 24, lineHeight: 1.1, letterSpacing: '-0.025em' }}>
+                Partner in the<br />
+                <span style={{ fontStyle: 'italic', color: 'var(--forest-lt)' }}>Revival</span>
+              </h2>
+              <p style={{ color: 'rgba(245,240,232,0.55)', fontSize: '1.05rem', marginBottom: 56, lineHeight: 1.8, fontWeight: 300 }}>
+                We are actively seeking visionary donors, impact funds, and corporate partners to scale this initiative. Join us in building a sustainable economic engine in the heart of the Cederberg.
+              </p>
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button style={{
+                  background: 'var(--linen)', color: 'var(--ink)',
+                  border: 'none', borderRadius: 2,
+                  padding: '18px 36px', fontSize: '0.9rem',
+                  fontFamily: 'DM Sans', letterSpacing: '0.05em',
+                  fontWeight: 500, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'background 0.2s',
+                }}>
+                  Request Full Pitch Deck <ArrowRight size={16} />
+                </button>
+                <button style={{
+                  background: 'transparent', color: 'var(--linen)',
+                  border: '1px solid rgba(245,240,232,0.25)', borderRadius: 2,
+                  padding: '18px 36px', fontSize: '0.9rem',
+                  fontFamily: 'DM Sans', letterSpacing: '0.05em',
+                  fontWeight: 400, cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                }}>
+                  Contact Project Leads
+                </button>
+              </div>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* ── FOOTER ── */}
+        <footer style={{
+          background: '#111', color: 'rgba(245,240,232,0.35)',
+          padding: '32px 48px', display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center',
+          fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase',
+          fontFamily: 'DM Sans', flexWrap: 'wrap', gap: 16,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Leaf size={12} color="var(--forest-lt)" opacity={0.5} />
+            <span>© {new Date().getFullYear()} The Elandskloof Projects</span>
+          </div>
+          <span style={{ fontStyle: 'italic', fontFamily: 'Playfair Display', textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>Cederberg, South Africa</span>
+        </footer>
+
+      </div>
+    </>
+  );
+}
